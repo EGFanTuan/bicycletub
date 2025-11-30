@@ -66,6 +66,12 @@ class BPlusTree {
   // Return the page id of the root node
   auto GetRootPageId() -> page_id_t;
 
+  // Pretty-print the B+ tree structure to a string (levels with page ids & keys)
+  auto DumpTree() const -> std::string;
+
+  // Print the B+ tree structure to the provided output stream
+  void Print(std::ostream &os) const;
+
   // Index iterator
   auto Begin() -> INDEXITERATOR_TYPE;
 

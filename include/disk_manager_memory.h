@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <array>
 #include <shared_mutex>
 
 #include "types.h"

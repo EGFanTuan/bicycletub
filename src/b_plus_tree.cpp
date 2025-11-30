@@ -1,6 +1,7 @@
 #include "b_plus_tree.h"
 #include "b_plus_tree_key.h"
 #include <cassert>
+#include <sstream>
 
 // Define BUSTUB_ASSERT macro if not already defined
 #ifndef BUSTUB_ASSERT
@@ -850,6 +851,65 @@ auto BPLUSTREE_TYPE::End() -> INDEXITERATOR_TYPE {
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::GetRootPageId() -> page_id_t { return bpm_->ReadPage(header_page_id_).As<BPlusTreeHeaderPage>()->root_page_id_; }
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::DumpTree() const -> std::string {
+  std::ostringstream out;
+  WritePageGuard header = bpm_->WritePage(header_page_id_);
+  page_id_t root_id = header.As<BPlusTreeHeaderPage>()->root_page_id_;
+  if (root_id == INVALID_PAGE_ID) {
+    out << index_name_ << " (empty)";
+    return out.str();
+  }
+  // BFS over pages; we collect levels
+  std::queue<page_id_t> q;
+  q.push(root_id);
+  int level = 0;
+  while (!q.empty()) {
+    size_t level_count = q.size();
+    out << "Level " << level << ": ";
+    bool first_node = true;
+    for (size_t i = 0; i < level_count; i++) {
+      page_id_t pid = q.front();
+      q.pop();
+      auto pg = bpm_->ReadPage(pid);
+      const BPlusTreePage *bp = pg.As<BPlusTreePage>();
+      if (!first_node) out << " | ";
+      first_node = false;
+      if (bp->IsLeafPage()) {
+        const LeafPage *lp = pg.As<LeafPage>();
+        out << "[Leaf pid=" << pid << ", size=" << lp->GetSize() << "] ";
+        out << "{";
+        for (int k = 0; k < lp->GetSize(); k++) {
+          if (k) out << ", ";
+          out << lp->KeyAt(k).GetValue();
+        }
+        out << "}";
+      } else {
+        const InternalPage *ip = pg.As<InternalPage>();
+        out << "[Internal pid=" << pid << ", size=" << ip->GetSize() << "] ";
+        out << "{";
+        for (int k = 1; k < ip->GetSize(); k++) {
+          if (k > 1) out << ", ";
+          out << ip->key_array_[k].GetValue();
+        }
+        out << "}";
+        // enqueue children; internal page stores first child at index 0, then one child after each key
+        for (int c = 0; c < ip->GetSize(); c++) {
+          q.push(ip->ValueAt(c));
+        }
+      }
+    }
+    out << '\n';
+    level++;
+  }
+  return out.str();
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::Print(std::ostream &os) const {
+  os << DumpTree() << std::endl;
+}
 
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::FindLeafPage(const KeyType &key, Context *ctx) const -> void {

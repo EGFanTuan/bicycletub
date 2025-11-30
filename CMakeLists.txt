@@ -4,6 +4,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(bicycletub LANGUAGES C CXX)
 
+include(FetchContent)
+
 add_library(bicycletub_lib STATIC
   include/types.h
   include/frame_header.h
@@ -42,51 +44,82 @@ target_include_directories(bicycletub_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc
 add_executable(bicycletub src/main.cpp)
 target_link_libraries(bicycletub bicycletub_lib)
 
-enable_testing()
+option(BICYCLTUB_BUILD_TESTS "Build bicycletub tests" ON)
 
-find_package(GTest REQUIRED)
-include(GoogleTest)
-
-add_executable(
-  bicycletub_buffer_pool_manager_tests
-  tests/buffer_pool_manager_test.cpp
-)
-
-add_executable(
-  bicycletub_b_plus_tree_tests
-  tests/b_plus_tree_single_test.cpp
-  tests/b_plus_tree_multi_thread_test.cpp
-  tests/b_plus_tree_long_run_test.cpp
-)
-
-add_executable(
-  bicycletub_bnlj_tests
-  tests/bnlj_test.cpp
-)
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/bnlj_stress_test.cpp)
-  target_sources(bicycletub_bnlj_tests PRIVATE tests/bnlj_stress_test.cpp)
-  target_link_libraries(bicycletub_bnlj_tests bicycletub_lib GTest::gtest_main)
-  gtest_discover_tests(bicycletub_bnlj_tests)
+if(BICYCLTUB_BUILD_TESTS)
+  enable_testing()
+  # Fetch googletest (no system install required)
+  FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+  )
+  # Avoid mismatch of runtime (/MD vs /MT) on MSVC; harmless on MinGW
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(googletest)
 endif()
 
-target_link_libraries(
-  bicycletub_buffer_pool_manager_tests
-  bicycletub_lib
-  GTest::gtest_main
-)
+if(BICYCLTUB_BUILD_TESTS)
+  add_executable(
+    bicycletub_buffer_pool_manager_tests
+    tests/test_runner_main.cpp
+    tests/buffer_pool_manager_test.cpp
+  )
 
-target_link_libraries(
-  bicycletub_bnlj_tests
-  bicycletub_lib
-  GTest::gtest_main
-)
+  add_executable(
+    bicycletub_b_plus_tree_tests
+    tests/test_runner_main.cpp
+    tests/b_plus_tree_single_test.cpp
+    tests/b_plus_tree_multi_thread_test.cpp
+    tests/b_plus_tree_long_run_test.cpp
+    tests/b_plus_tree_visual_test.cpp
+  )
 
-target_link_libraries(
-  bicycletub_b_plus_tree_tests
-  bicycletub_lib
-  GTest::gtest_main
-)
+  add_executable(
+    bicycletub_bnlj_tests
+    tests/test_runner_main.cpp
+    tests/bnlj_test.cpp
+  )
 
-gtest_discover_tests(bicycletub_buffer_pool_manager_tests)
-gtest_discover_tests(bicycletub_b_plus_tree_tests)
-gtest_discover_tests(bicycletub_bnlj_tests)
+  add_executable(
+    bicycletub_bnlj_stress_tests
+    tests/test_runner_main.cpp
+    tests/bnlj_stress_test.cpp
+    tests/bnlj_test.cpp
+    tests/bnlj_visual_test.cpp
+  )
+endif()
+
+if(BICYCLTUB_BUILD_TESTS)
+  target_link_libraries(
+    bicycletub_buffer_pool_manager_tests
+    PRIVATE
+    bicycletub_lib
+    gtest
+  )
+
+  target_link_libraries(
+    bicycletub_bnlj_tests
+    PRIVATE
+    bicycletub_lib
+    gtest
+  )
+
+  target_link_libraries(
+    bicycletub_b_plus_tree_tests
+    PRIVATE
+    bicycletub_lib
+    gtest
+  )
+
+  target_link_libraries(
+    bicycletub_bnlj_stress_tests
+    PRIVATE
+    bicycletub_lib
+    gtest
+  )
+
+  include(GoogleTest) # provides gtest_discover_tests
+  gtest_discover_tests(bicycletub_buffer_pool_manager_tests)
+  gtest_discover_tests(bicycletub_b_plus_tree_tests)
+  gtest_discover_tests(bicycletub_bnlj_tests)
+endif()
