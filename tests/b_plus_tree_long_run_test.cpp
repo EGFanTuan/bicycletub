@@ -81,7 +81,7 @@ class BPlusTreeLongRunTest : public ::testing::Test {
 };
 
 // Disabled by default to avoid slowing normal CI runs.
-TEST_F(BPlusTreeLongRunTest, LongRunMixedHotspot) {
+TEST_F(BPlusTreeLongRunTest, DISABLED_LongRunMixedHotspot) {
   const int threads = GetEnvInt("BICY_STRESS_THREADS", 32);
   const int seconds = GetEnvInt("BICY_STRESS_SECS", 10);
   const int hot = GetEnvInt("BICY_STRESS_HOT", 1000); // hotspot range
