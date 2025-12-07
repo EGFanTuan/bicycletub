@@ -4,6 +4,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(bicycletub LANGUAGES C CXX)
 
+if(WIN32)
+  if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  else()
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -lpthread")
+    endif()
+  endif()
+endif()
+
 include(FetchContent)
 
 add_library(bicycletub_lib STATIC
@@ -53,8 +65,9 @@ if(BICYCLTUB_BUILD_TESTS)
     googletest
     URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
   )
-  # Avoid mismatch of runtime (/MD vs /MT) on MSVC; harmless on MinGW
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  # For MSVC: use static runtime library (/MT instead of /MD)
+  # For MinGW: this setting is harmless
+  set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
   FetchContent_MakeAvailable(googletest)
 endif()
 
